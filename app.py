@@ -35,7 +35,7 @@ st.markdown("""<style>
     div[data-testid="stSidebar"] .stMarkdown, div[data-testid="stSidebar"] label { color: #ffffff !important; }
     
     /* Кнопки неактивных чатов — черные с белой рамкой и белым текстом */
-    .stButton>button { background-color: #08080c !important; color: #ffffff !important; border: 2px solid #ffffff !important; border-radius: 0px !important; font-weight: bold !important; text-align: left !important; padding: 12px !important; margin-bottom: -5px !important; }
+    .stButton>button { background-color: #08080c !important; color: #ffffff !important; border: 2px solid #ffffff !important; border-radius: 0px !important; font-weight: bold !important; text-align: left !important; padding: 12px !important; margin-bottom: -5px !important; width: 100% !important; }
     .stButton>button:hover { background-color: #1c1c24 !important; border-color: #22c55e !important; }
     
     /* Стилизация сообщений строго по макету */
@@ -78,7 +78,6 @@ new_friend = st.sidebar.text_input("", placeholder="Введи никнейм п
 
 if st.sidebar.button("➕ Создать чат", use_container_width=True):
     if new_friend and new_friend != st.session_state.chat_user:
-        # Уникальный ключ комнаты для двух пользователей, чтобы переписку видели только они двое
         room_key = "__".join(sorted([st.session_state.chat_user, new_friend]))
         if room_key not in db_talks:
             db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "v3.png"}]
@@ -91,7 +90,6 @@ if st.sidebar.button("➕ Создать чат", use_container_width=True):
 st.sidebar.write("---")
 st.sidebar.markdown("### 💬 Твои переписки:")
 
-# Автоматически создаем чат с Василием, если у пользователя вообще пустая база
 vasya_room = f"Кот_Василий__{st.session_state.chat_user}"
 if vasya_room not in db_talks:
     db_talks[vasya_room] = [{"time": time.strftime("%H:%M"), "user": "Кот Василий", "text": "Дарова брат! Я всегда в сети. Чертежи на месте, пушки заряжены! Пиши, если что.", "avatar": "v2.png"}]
@@ -101,9 +99,7 @@ if st.session_state.current_room is None:
     st.session_state.current_room = vasya_room
 # --- ДИНАМИЧЕСКИЙ ВЫВОД ТОЛЬКО ЛИЧНЫХ ЧАТОВ ПОЛЬЗОВАТЕЛЯ ---
 for room_id in list(db_talks.keys()):
-    # Проверяем, участвует ли текущий пользователь в этой комнате
     if st.session_state.chat_user in room_id or room_id.startswith("Кот_Василий__"):
-        # Формируем красивое имя для отображения в списке контактов
         if room_id.startswith("Кот_Василий__"):
             display_name = "🐱 Кот Василий"
         else:
@@ -112,7 +108,7 @@ for room_id in list(db_talks.keys()):
             
         last_msg = db_talks[room_id][-1]["text"] if db_talks[room_id] else "Нет сообщений"
         
-        # Если этот чат сейчас открыт — делаем жирную зелёную плашку строго по макету
+        # Если чат активный — делаем жирную зелёную плашку строго по макету
         if st.session_state.current_room == room_id:
             st.sidebar.markdown(f"""
             <div style="background-color:#22c55e; border:2px solid #ffffff; padding:12px; color:#ffffff; font-weight:bold; margin-bottom:5px;">
@@ -135,11 +131,10 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ (СТРОГО ПО ТВОЕМУ РИСУНКУ) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ИНТЕГРИРОВАННЫМ ПОИСКОМ (ФИЧА №9) =================
 active_room = st.session_state.current_room
-room_messages = db_talks.get(active_room, [])
+raw_messages = db_talks.get(active_room, [])
 
-# Определяем имя текущего собеседника для шапки
 if active_room.startswith("Кот_Василий__"):
     header_name = "🐱 Кот Василий"
 else:
@@ -147,31 +142,45 @@ else:
     header_name = names[1] if names[0] == st.session_state.chat_user else names[0]
 
 st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
+
+# --- 🔍 ФИЧА №9: ГЛОБАЛЬНЫЙ ПОИСК ПО СООБЩЕНИЯМ (СТРОГО НА СВОЁМ МЕСТЕ) ---
+search_query = st.text_input("🔍 Найти слово в переписке:", placeholder="Введите текст для фильтрации...").strip().lower()
 st.write("---")
+
+# Алгоритм фильтрации сообщений на лету
+if search_query:
+    room_messages = [m for m in raw_messages if search_query in m['text'].lower()]
+else:
+    room_messages = raw_messages
 
 chat_box = st.container()
 
 with chat_box:
-    for msg in room_messages:
-        avatar_path = msg.get('avatar', 'v1.png')
-        avatar_img_url = f"https://githubusercontent.com{avatar_path}"
-        
-        # Мои сообщения улетают НАПРАВО
-        if msg['user'] == st.session_state.chat_user or msg['user'] == "Я":
-            st.markdown(f"""
-            <div class="msg-right">
-                <span style="font-size:12px; color:#a1a1aa; margin-right:8px;">{msg['time']}</span>
-                {msg['text']} : <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-left:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>
-            </div>
-            """, unsafe_allow_html=True)
-        # Сообщения друзей или Василия выстраиваются СЛЕВА
-        else:
-            st.markdown(f"""
-            <div class="msg-left">
-                <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-right:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>: {msg['text']}
-                <span style="font-size:12px; color:#a1a1aa; margin-left:8px;">{msg['time']}</span>
-            </div>
-            """, unsafe_allow_html=True)
+    if not room_messages and search_query:
+        st.warning("📭 Сообщений с таким словом не найдено.")
+    elif not room_messages:
+        st.info("Здесь пока тихо... Напиши первое пацанское сообщение!")
+    else:
+        for msg in room_messages:
+            avatar_path = msg.get('avatar', 'v1.png')
+            avatar_img_url = f"https://githubusercontent.com{avatar_path}"
+            
+            # Мои сообщения улетают НАПРАВО
+            if msg['user'] == st.session_state.chat_user or msg['user'] == "Я":
+                st.markdown(f"""
+                <div class="msg-right">
+                    <span style="font-size:12px; color:#a1a1aa; margin-right:8px;">{msg['time']}</span>
+                    {msg['text']} : <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-left:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>
+                </div>
+                """, unsafe_allow_html=True)
+            # Сообщения друзей или Василия выстраиваются СЛЕВА
+            else:
+                st.markdown(f"""
+                <div class="msg-left">
+                    <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-right:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>: {msg['text']}
+                    <span style="font-size:12px; color:#a1a1aa; margin-left:8px;">{msg['time']}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
 # Свободный отступ перед нижним полем ввода
 st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -191,7 +200,4 @@ with st.form("send_msg_form", clear_on_submit=True):
         db_talks[active_room].append(new_msg_data)
         save_data(db_talks)
         st.rerun()
-# --- ХАК ФИЧИ №9: ПОИСК В КОНЦЕ ФАЙЛА С ВИЗУАЛЬНЫМ ПЕРЕНОСОМ НАВЕРХ ---
-st.markdown("<style>div.stTextInput:has(input[placeholder='Поиск по словам...']) { order: -1 !important; margin-bottom: 20px; }</style>", unsafe_allow_html=True)
-if st.session_state.get("current_room") and "search_q" in st.session_state:
-    search_q = st.text_input("🔍 Поиск:", placeholder="Поиск по словам...", key="search_query_box").strip().lower()
+
