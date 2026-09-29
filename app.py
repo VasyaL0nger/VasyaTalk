@@ -6,50 +6,53 @@ import time
 st.set_page_config(page_title="VasyaTalk Premium", layout="wide", page_icon="🐱")
 
 DB_MESSAGES = "db_talks.json"
+DB_ONLINE = "db_online.json"  # База данных для Фичи №3
 
 # --- ФУНКЦИИ БАЗЫ ДАННЫХ ---
-def load_data():
-    if os.path.exists(DB_MESSAGES):
+def load_data(filename):
+    if os.path.exists(filename):
         try:
-            with open(DB_MESSAGES, "r", encoding="utf-8") as f: return json.load(f)
-        except: return {}
-    return {}
+            with open(filename, "r", encoding="utf-8") as f: return json.load(f)
+        except: return {} if "talks" in filename or "online" in filename else []
+    return {} if "talks" in filename or "online" in filename else []
 
-def save_data(data):
-    with open(DB_MESSAGES, "w", encoding="utf-8") as f:
+def save_data(data, filename):
+    with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-db_talks = load_data()
+db_talks = load_data(DB_MESSAGES)
+db_online = load_data(DB_ONLINE)
 
 if "chat_user" not in st.session_state: st.session_state.chat_user = None
 if "chat_avatar" not in st.session_state: st.session_state.chat_avatar = None
 if "current_room" not in st.session_state: st.session_state.current_room = None
 
-# ================= 🎨 НОЧНОЙ ХАКЕРСКИЙ ИНТЕРФЕЙС (ЧЕРНОЕ БЕЛОЕ + ЗЕЛЕНЫЙ) =================
+# Фича №3: Фиксируем активность текущего кота в сети (таймаут 5 минут)
+current_time = time.time()
+if st.session_state.chat_user:
+    db_online[st.session_state.chat_user] = {
+        "time": current_time,
+        "avatar": st.session_state.chat_avatar
+    }
+    # Очищаем совсем старых юзеров, которые вышли из сети более 5 минут назад
+    db_online = {u: t for u, t in db_online.items() if current_time - t["time"] < 300}
+    save_data(db_online, DB_ONLINE)
+
+# ================= 🎨 НОЧНОЙ ХАКЕРСКИЙ ИНТЕРФЕЙС =================
 st.markdown("""<style>
-    /* Весь интерфейс становится черным, текст — белым */
     .stApp { background-color: #08080c !important; color: #ffffff !important; font-family: sans-serif !important; }
-    
-    /* Боковое меню — черное с белой жирной разделительной линией */
     div[data-testid="stSidebar"] { background-color: #08080c !important; border-right: 3px solid #ffffff !important; color: #ffffff !important; }
     div[data-testid="stSidebar"] .stMarkdown, div[data-testid="stSidebar"] label { color: #ffffff !important; }
-    
-    /* Кнопки неактивных чатов — черные с белой рамкой и белым текстом */
     .stButton>button { background-color: #08080c !important; color: #ffffff !important; border: 2px solid #ffffff !important; border-radius: 0px !important; font-weight: bold !important; text-align: left !important; padding: 12px !important; margin-bottom: -5px !important; width: 100% !important; }
     .stButton>button:hover { background-color: #1c1c24 !important; border-color: #22c55e !important; }
-    
-    /* Стилизация сообщений строго по макету */
     .msg-left { text-align: left; margin-bottom: 12px; color: #ffffff; font-size: 18px; }
     .msg-right { text-align: right; margin-bottom: 12px; color: #ffffff; font-size: 18px; font-weight: bold; }
-    
-    /* Текстовые поля ввода */
     input { background-color: #12121a !important; border: 2px solid #ffffff !important; border-radius: 0px !important; color: #ffffff !important; }
-    
-    /* Форма отправки внизу */
     div[data-testid="stForm"] { background-color: #08080c !important; border: none !important; padding: 0px !important; }
+    .online-user { display: inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; }
 </style>""", unsafe_allow_html=True)
 
-# --- ОКНО ВХОДА И ВЫБОРА АВАТАРОК ---
+# --- ОКНО ВХОДА ---
 if st.session_state.chat_user is None:
     st.markdown("<h2 style='color:#ffffff; text-align:center;'>🔑 Вход в сеть VasyaTalk</h2>", unsafe_allow_html=True)
     nickname = st.text_input("Введи свой пацанский никнейм:", placeholder="Например: Снайпер_Рыжий").strip()
@@ -65,6 +68,9 @@ if st.session_state.chat_user is None:
         if nickname:
             st.session_state.chat_user = nickname
             st.session_state.chat_avatar = avatar_options[avatar_choice]
+            # Сразу фиксируем в онлайн при входе
+            db_online[nickname] = {"time": time.time(), "avatar": avatar_options[avatar_choice]}
+            save_data(db_online, DB_ONLINE)
             st.rerun()
         else: st.error("⚠️ Никнейм не может быть пустым!")
     st.stop()
@@ -81,11 +87,36 @@ if st.sidebar.button("➕ Создать чат", use_container_width=True):
         room_key = "__".join(sorted([st.session_state.chat_user, new_friend]))
         if room_key not in db_talks:
             db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "v3.png"}]
-            save_data(db_talks)
+            save_data(db_talks, DB_MESSAGES)
         st.session_state.current_room = room_key
         st.rerun()
     elif new_friend == st.session_state.chat_user:
         st.sidebar.error("⚠️ Нельзя создать чат с самим собой!")
+
+st.sidebar.write("---")
+# --- ФИЧА №3: ВИЗУАЛЬНЫЙ БЛОК «КОТЫ В СЕТИ» (ОНЛАЙН СЧЁТЧИК) ---
+online_count = len(db_online) + 1  # Плюс Кот Василий, который всегда онлайн
+st.sidebar.markdown(f"### 👥 Коты в сети: `{online_count}`")
+
+# Выводим аватарку Василия (он всегда на связи)
+v_url = "https://githubusercontent.com"
+st.sidebar.markdown(f"""
+<div class="online-user">
+    <img src="{v_url}" width="35" style="border-radius:50%; border:2px solid #22c55e;"><br>
+    <span style="font-size:11px; color:#22c55e;">● Василий</span>
+</div>
+""", unsafe_allow_html=True)
+
+# Выводим аватарки реальных пацанов из базы активности
+for user_on, data_on in db_online.items():
+    if user_on != "Кот Василий":
+        u_url = f"https://githubusercontent.com{data_on['avatar']}"
+        st.sidebar.markdown(f"""
+        <div class="online-user">
+            <img src="{u_url}" width="35" style="border-radius:50%; border:2px solid #22c55e;"><br>
+            <span style="font-size:11px; color:#22c55e;">● {user_on[:8]}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 💬 Твои переписки:")
@@ -93,10 +124,11 @@ st.sidebar.markdown("### 💬 Твои переписки:")
 vasya_room = f"Кот_Василий__{st.session_state.chat_user}"
 if vasya_room not in db_talks:
     db_talks[vasya_room] = [{"time": time.strftime("%H:%M"), "user": "Кот Василий", "text": "Дарова брат! Я всегда в сети. Чертежи на месте, пушки заряжены! Пиши, если что.", "avatar": "v2.png"}]
-    save_data(db_talks)
+    save_data(db_talks, DB_MESSAGES)
 
 if st.session_state.current_room is None:
     st.session_state.current_room = vasya_room
+
 # --- ДИНАМИЧЕСКИЙ ВЫВОД ТОЛЬКО ЛИЧНЫХ ЧАТОВ ПОЛЬЗОВАТЕЛЯ ---
 for room_id in list(db_talks.keys()):
     if st.session_state.chat_user in room_id or room_id.startswith("Кот_Василий__"):
@@ -131,7 +163,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ИНТЕГРИРОВАННЫМ ПОИСКОМ (ФИЧА №9) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ИНТЕГРИРОВАННЫМ ПОИСКОМ =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -143,11 +175,10 @@ else:
 
 st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 
-# --- 🔍 ФИЧА №9: ГЛОБАЛЬНЫЙ ПОИСК ПО СООБЩЕНИЯМ (СТРОГО НА СВОЁМ МЕСТЕ) ---
+# Поисковый движок (Фича №9)
 search_query = st.text_input("🔍 Найти слово в переписке:", placeholder="Введите текст для фильтрации...").strip().lower()
 st.write("---")
 
-# Алгоритм фильтрации сообщений на лету
 if search_query:
     room_messages = [m for m in raw_messages if search_query in m['text'].lower()]
 else:
@@ -198,6 +229,5 @@ with st.form("send_msg_form", clear_on_submit=True):
             "avatar": st.session_state.chat_avatar
         }
         db_talks[active_room].append(new_msg_data)
-        save_data(db_talks)
+        save_data(db_talks, DB_MESSAGES)
         st.rerun()
-
