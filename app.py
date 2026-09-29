@@ -191,3 +191,7 @@ with st.form("send_msg_form", clear_on_submit=True):
         db_talks[active_room].append(new_msg_data)
         save_data(db_talks)
         st.rerun()
+# --- ХАК ФИЧИ №9: ПОИСК В КОНЦЕ ФАЙЛА С ВИЗУАЛЬНЫМ ПЕРЕНОСОМ НАВЕРХ ---
+st.markdown("<style>div.stTextInput:has(input[placeholder='Поиск по словам...']) { order: -1 !important; margin-bottom: 20px; }</style>", unsafe_allow_html=True)
+if st.session_state.get("current_room") and "search_q" in st.session_state:
+    search_q = st.text_input("🔍 Поиск:", placeholder="Поиск по словам...", key="search_query_box").strip().lower()
