@@ -69,20 +69,21 @@ if st.session_state.chat_user is None:
         else: st.error("⚠️ Никнейм не может быть пустым!")
     st.stop()
 
-# --- ЛЕВАЯ ПАНЕЛЬ С СИСТЕМОЙ ПОИСКА И ДОБАВЛЕНИЯ ПО ЮЗЕРНЕЙМАМ ---
+# --- ЛЕВАЯ ПАНЕЛЬ С СИСТЕМОЙ ДОБАВЛЕНИЯ ДРУЗЕЙ ПО НИКНЕЙМАМ ---
 st.sidebar.markdown(f"👤 Кот в сети: **{st.session_state.chat_user}**")
 st.sidebar.write("---")
 
-st.sidebar.markdown("### 🔍 Добавить друга по нику")
+st.sidebar.markdown("### 🔍 Найти кота по нику")
 new_friend = st.sidebar.text_input("", placeholder="Введи никнейм пацана...", key="find_friend_input").strip()
 
 if st.sidebar.button("➕ Создать чат", use_container_width=True):
     if new_friend and new_friend != st.session_state.chat_user:
-        if new_friend not in db_talks:
-            # Создаем пустой лог чата для нового юзернейма
-            db_talks[new_friend] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"Секретный чат с {new_friend} успешно создан! 💥", "avatar": "v3.png"}]
+        # Уникальный ключ комнаты для двух пользователей, чтобы переписку видели только они двое
+        room_key = "__".join(sorted([st.session_state.chat_user, new_friend]))
+        if room_key not in db_talks:
+            db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "v3.png"}]
             save_data(db_talks)
-        st.session_state.current_room = new_friend
+        st.session_state.current_room = room_key
         st.rerun()
     elif new_friend == st.session_state.chat_user:
         st.sidebar.error("⚠️ Нельзя создать чат с самим собой!")
@@ -90,31 +91,42 @@ if st.sidebar.button("➕ Создать чат", use_container_width=True):
 st.sidebar.write("---")
 st.sidebar.markdown("### 💬 Твои переписки:")
 
-# Если комната не выбрана, автоматически открываем первый доступный чат пацана
-if st.session_state.current_room is None and db_talks:
-    st.session_state.current_room = list(db_talks.keys())[0]
-# --- ДИНАМИЧЕСКИЙ СВИСОК ЧАТОВ ПО ЮЗЕРНЕЙМАМ С ЗЕЛЕНЫМ ВЫДЕЛЕНИЕМ ---
-if not db_talks:
-    st.sidebar.caption("📭 Список чатов пуст. Добавь друга по нику выше!")
-else:
-    for friend_name in list(db_talks.keys()):
-        last_msg = db_talks[friend_name][-1]["text"] if db_talks[friend_name] else "Нет сообщений"
+# Автоматически создаем чат с Василием, если у пользователя вообще пустая база
+vasya_room = f"Кот_Василий__{st.session_state.chat_user}"
+if vasya_room not in db_talks:
+    db_talks[vasya_room] = [{"time": time.strftime("%H:%M"), "user": "Кот Василий", "text": "Дарова брат! Я всегда в сети. Чертежи на месте, пушки заряжены! Пиши, если что.", "avatar": "v2.png"}]
+    save_data(db_talks)
+
+if st.session_state.current_room is None:
+    st.session_state.current_room = vasya_room
+# --- ДИНАМИЧЕСКИЙ ВЫВОД ТОЛЬКО ЛИЧНЫХ ЧАТОВ ПОЛЬЗОВАТЕЛЯ ---
+for room_id in list(db_talks.keys()):
+    # Проверяем, участвует ли текущий пользователь в этой комнате
+    if st.session_state.chat_user in room_id or room_id.startswith("Кот_Василий__"):
+        # Формируем красивое имя для отображения в списке контактов
+        if room_id.startswith("Кот_Василий__"):
+            display_name = "🐱 Кот Василий"
+        else:
+            names = room_id.split("__")
+            display_name = names[1] if names[0] == st.session_state.chat_user else names[0]
+            
+        last_msg = db_talks[room_id][-1]["text"] if db_talks[room_id] else "Нет сообщений"
         
-        # Если чат активный — красим плашку в зеленый цвет (строго по макету)
-        if st.session_state.current_room == friend_name:
+        # Если этот чат сейчас открыт — делаем жирную зелёную плашку строго по макету
+        if st.session_state.current_room == room_id:
             st.sidebar.markdown(f"""
             <div style="background-color:#22c55e; border:2px solid #ffffff; padding:12px; color:#ffffff; font-weight:bold; margin-bottom:5px;">
-                <h4 style="margin:0; font-size:16px;">👤 {friend_name}</h4>
+                <h4 style="margin:0; font-size:16px;">{display_name}</h4>
                 <p style="margin:5px 0 0 0; font-size:13px; color:#f0fdf4; font-weight:normal; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{last_msg}</p>
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Неактивные чаты — обычные черные кнопки с белой рамкой
-            if st.sidebar.button(f"👤 {friend_name}\n\n{last_msg[:20]}...", key=f"btn_{friend_name}", use_container_width=True):
-                st.session_state.current_room = friend_name
+            # Все остальные неактивные чаты — обычные чёрные кнопки с белой рамкой
+            if st.sidebar.button(f"{display_name}\n\n{last_msg[:20]}...", key=f"btn_{room_id}", use_container_width=True):
+                st.session_state.current_room = room_id
                 st.rerun()
 
-# --- ВЫХОД ИЗ СИСТЕМЫ ---
+# --- КНОПКА ВЫХОДА ИЗ СЕТИ ---
 st.sidebar.write("---")
 if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.session_state.chat_user = None
@@ -123,54 +135,59 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ ПО ЮЗЕРНЕЙМАМ (СТРОГО ПО МАКЕТУ) =================
-if st.session_state.current_room is None:
-    st.info("🎈 Создай или выбери чат в левой панели, чтобы начать тереть с пацанами!")
-else:
-    active_room = st.session_state.current_room
-    st.markdown(f"## 💬 Чат: {active_room}")
-    st.write("---")
-    
-    room_messages = db_talks.get(active_room, [])
-    chat_box = st.container()
-    
-    with chat_box:
-        for msg in room_messages:
-            avatar_path = msg.get('avatar', 'v1.png')
-            # Ссылка на аватарки, загруженные тобой в репозиторий GitHub
-            avatar_img_url = f"https://githubusercontent.com{avatar_path}"
-            
-            # Разделяем сообщения по краям (Мои — направо, Друзей — налево)
-            if msg['user'] == st.session_state.chat_user or msg['user'] == "Я":
-                st.markdown(f"""
-                <div class="msg-right">
-                    <span style="font-size:12px; color:#a1a1aa; margin-right:8px;">{msg['time']}</span>
-                    {msg['text']} : <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-left:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="msg-left">
-                    <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-right:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>: {msg['text']}
-                    <span style="font-size:12px; color:#a1a1aa; margin-left:8px;">{msg['time']}</span>
-                </div>
-                """, unsafe_allow_html=True)
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ (СТРОГО ПО ТВОЕМУ РИСУНКУ) =================
+active_room = st.session_state.current_room
+room_messages = db_talks.get(active_room, [])
 
-    # Отступ перед полем ввода внизу страницы
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    
-    # --- НИЖНЕЕ ПОЛЕ ВВОДА СООБЩЕНИЯ ---
-    with st.form("send_msg_form", clear_on_submit=True):
-        user_message = st.text_input("", placeholder="Напиши тут сообщение...")
-        send_btn = st.form_submit_button("🚀")
+# Определяем имя текущего собеседника для шапки
+if active_room.startswith("Кот_Василий__"):
+    header_name = "🐱 Кот Василий"
+else:
+    names = active_room.split("__")
+    header_name = names[1] if names[0] == st.session_state.chat_user else names[0]
+
+st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
+st.write("---")
+
+chat_box = st.container()
+
+with chat_box:
+    for msg in room_messages:
+        avatar_path = msg.get('avatar', 'v1.png')
+        avatar_img_url = f"https://githubusercontent.com{avatar_path}"
         
-        if send_btn and user_message:
-            new_msg_data = {
-                "time": time.strftime("%H:%M"),
-                "user": st.session_state.chat_user,
-                "text": user_message.strip(),
-                "avatar": st.session_state.chat_avatar
-            }
-            db_talks[active_room].append(new_msg_data)
-            save_data(db_talks)
-            st.rerun()
+        # Мои сообщения улетают НАПРАВО
+        if msg['user'] == st.session_state.chat_user or msg['user'] == "Я":
+            st.markdown(f"""
+            <div class="msg-right">
+                <span style="font-size:12px; color:#a1a1aa; margin-right:8px;">{msg['time']}</span>
+                {msg['text']} : <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-left:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>
+            </div>
+            """, unsafe_allow_html=True)
+        # Сообщения друзей или Василия выстраиваются СЛЕВА
+        else:
+            st.markdown(f"""
+            <div class="msg-left">
+                <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-right:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>: {msg['text']}
+                <span style="font-size:12px; color:#a1a1aa; margin-left:8px;">{msg['time']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Свободный отступ перед нижним полем ввода
+st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+# --- НИЖНЕЕ ПОЛЕ ВВОДА СООБЩЕНИЯ ---
+with st.form("send_msg_form", clear_on_submit=True):
+    user_message = st.text_input("", placeholder="Напиши тут сообщение...")
+    send_btn = st.form_submit_button("🚀")
+    
+    if send_btn and user_message:
+        new_msg_data = {
+            "time": time.strftime("%H:%M"),
+            "user": st.session_state.chat_user,
+            "text": user_message.strip(),
+            "avatar": st.session_state.chat_avatar
+        }
+        db_talks[active_room].append(new_msg_data)
+        save_data(db_talks)
+        st.rerun()
