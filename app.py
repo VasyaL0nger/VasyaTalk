@@ -27,20 +27,39 @@ if "chat_user" not in st.session_state: st.session_state.chat_user = None
 if "chat_avatar" not in st.session_state: st.session_state.chat_avatar = None
 if "current_room" not in st.session_state: st.session_state.current_room = None
 
-# Фиксация онлайна в сети (Фича №3)
+# Фиксация онлайна в сети
 current_time = time.time()
 if st.session_state.chat_user:
     db_online[st.session_state.chat_user] = {"time": current_time, "avatar": st.session_state.chat_avatar}
     db_online = {u: t for u, t in db_online.items() if current_time - t["time"] < 300}
     save_data(db_online, DB_ONLINE)
 
-# ================= 🚀 ФИЧА №9: ИНЖЕКТ ДВИЖКА PWA ДЛЯ СКАЧИВАНИЯ НА ТЕЛЕФОН / ПК =================
+# ================= 🚀 ДВИЖОК ДЛЯ СКАЧИВАНИЯ (ФИЧА №9) =================
 st.markdown("""
 <script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  console.log('PWA prompt ready');
+});
+
+function installVasyaTalk() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User installed VasyaTalk');
+      }
+      deferredPrompt = null;
+    });
+  } else {
+    alert('Братух, если кнопка не срабатывает автоматически, нажми на три точки в углу браузера и выбери "Установить" или "Добавить на гл. экран"!');
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('data:text/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGZ1bmN0aW9uKGV2ZW50KSB7fSk7').then(function() {
-    console.log('VasyaTalk PWA Engine Activated! Ready to install.');
-  });
+  navigator.serviceWorker.register('data:text/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGZ1bmN0aW9uKGV2ZW50KSB7fSk7');
 }
 </script>
 """, unsafe_allow_html=True)
@@ -65,11 +84,28 @@ st.markdown("""<style>
     
     .call-link-bottom { display: block; text-align: center; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 14px; text-decoration: none; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); margin-top: 25px; }
     .call-link-bottom:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.01); }
+    
+    /* Стили для окна скачивания перед регистрацией */
+    .download-box { background-color: #12121a !important; border: 2px dashed #22c55e !important; padding: 20px; text-align: center; margin-bottom: 25px; }
+    .download-btn { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important; color: white !important; font-weight: bold; padding: 12px 24px; border: 2px solid white; cursor: pointer; display: inline-block; font-size: 16px; margin-top: 10px; text-decoration: none; }
+    .download-btn:hover { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important; transform: scale(1.02); }
 </style>""", unsafe_allow_html=True)
 
-# --- ОКНО ВХОДА ---
+# --- ОКНО ВХОДА С ОКНОМ СКАЧИВАНИЯ ПРИЛОЖЕНИЯ ---
 if st.session_state.chat_user is None:
-    st.markdown("<h2 style='color:#ffffff; text-align:center;'>🔑 Вход в сеть VasyaTalk</h2>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#ffffff; text-align:center;'>🐱 Сеть VasyaTalk Premium</h1>", unsafe_allow_html=True)
+    st.write("<br>", unsafe_allow_html=True)
+    
+    # --- ОКНО ДЛЯ СКАЧИВАНИЯ НА ТЕЛЕФОН / ПК ---
+    st.markdown("""
+    <div class="download-box">
+        <h3 style="margin:0; color:#22c55e;">📱 ХОЧЕШЬ СКАЧАТЬ ВАСЯТАЛК НА ТЕЛЕФОН ИЛИ ПК?</h3>
+        <p style="color:#a1a1aa; margin:5px 0;">Установи мессенджер как официальное приложение с иконкой на рабочий экран!</p>
+        <button class="download-btn" onclick="installVasyaTalk()">📥 СКАЧАТЬ ПРИЛОЖЕНИЕ</button>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("### 🔑 Авторизация в мессенджере:")
     nickname = st.text_input("Введи свой пацанский никнейм:", placeholder="Например: Снайпер_Рыжий").strip()
     
     avatar_options = {
@@ -79,7 +115,7 @@ if st.session_state.chat_user is None:
     }
     avatar_choice = st.selectbox("Выбери статус-иконку кота:", list(avatar_options.keys()))
     
-    if st.button("🚀 ПОДКЛЮЧИТЬСЯ"):
+    if st.button("🚀 ПОДКЛЮЧИТЬСЯ к ЧАТУ", use_container_width=True):
         if nickname:
             st.session_state.chat_user = nickname
             st.session_state.chat_avatar = avatar_options[avatar_choice]
@@ -92,7 +128,6 @@ if st.session_state.chat_user is None:
 # --- ЛЕВАЯ ПАНЕЛЬ С СИСТЕМОЙ КОНТАКТОВ ---
 st.sidebar.markdown(f"👤 Кот в сети: **{st.session_state.chat_user}**")
 st.sidebar.write("---")
-
 st.sidebar.markdown("### 🔍 Найти кота по нику")
 new_friend = st.sidebar.text_input("", placeholder="Введи никнейм пацана...", key="find_friend_input").strip()
 
@@ -108,6 +143,7 @@ if st.sidebar.button("➕ Создать чат", use_container_width=True):
         st.sidebar.error("⚠️ Нельзя создать чат с самим собой!")
 
 st.sidebar.write("---")
+
 # --- ВЫВОД СЧЁТЧИКА ОНЛАЙНА (ФИЧА №3) ---
 online_count = len(db_online) + 1
 st.sidebar.markdown(f"### 👥 Коты в сети: `{online_count}`")
