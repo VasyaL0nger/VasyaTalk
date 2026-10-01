@@ -47,7 +47,58 @@ st.markdown("""<style>
     .msg-right { text-align: right; margin-bottom: 12px; color: #ffffff; font-size: 18px; font-weight: bold; }
     
     input { background-color: #12121a !important; border: 2px solid #ffffff !important; border-radius: 0px !important; color: #ffffff !important; }
- # --- ВЫВОД СЧЁТЧИКА ОНЛАЙНА (ФИЧА №3) ---
+    div[data-testid="stForm"] { background-color: #08080c !important; border: none !important; padding: 0px !important; }
+    .online-user { display: inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; }
+    
+    audio { filter: invert(90%) hue-rotate(180deg); margin-top: 5px; max-width: 100%; }
+    
+    /* Красивая кнопка звонка в шапке */
+    .call-link { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 10px 20px; text-decoration: none; border-radius: 6px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+    .call-link:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.02); }
+</style>""", unsafe_allow_html=True)
+
+# --- ОКНО ВХОДА ---
+if st.session_state.chat_user is None:
+    st.markdown("<h2 style='color:#ffffff; text-align:center;'>🔑 Вход в сеть VasyaTalk</h2>", unsafe_allow_html=True)
+    nickname = st.text_input("Введи свой пацанский никнейм:", placeholder="Например: Снайпер_Рыжий").strip()
+    
+    avatar_options = {
+        "🐱 Василий Спецназ": "🐱", "🟢 Василий Геймер": "🟢", "🛠️ Василий Инженер": "🛠️",
+        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍☠️", "🎀 Мурка Стримерша": "🎀",
+        "🕵️‍♀️ Мурка Агент": "🕵️‍♀️", "🎓 Мурка Отличница": "🎓", "👑 Мурка Premium": "👑", "⚓ Штурман Мурка": "⚓"
+    }
+    avatar_choice = st.selectbox("Выбери статус-иконку кота:", list(avatar_options.keys()))
+    
+    if st.button("🚀 ПОДКЛЮЧИТЬСЯ"):
+        if nickname:
+            st.session_state.chat_user = nickname
+            st.session_state.chat_avatar = avatar_options[avatar_choice]
+            db_online[nickname] = {"time": time.time(), "avatar": avatar_options[avatar_choice]}
+            save_data(db_online, DB_ONLINE)
+            st.rerun()
+        else: st.error("⚠️ Никнейм не может быть пустым!")
+    st.stop()
+
+# --- ЛЕВАЯ ПАНЕЛЬ С СИСТЕМОЙ КОНТАКТОВ ---
+st.sidebar.markdown(f"👤 Кот в сети: **{st.session_state.chat_user}**")
+st.sidebar.write("---")
+
+st.sidebar.markdown("### 🔍 Найти кота по нику")
+new_friend = st.sidebar.text_input("", placeholder="Введи никнейм пацана...", key="find_friend_input").strip()
+
+if st.sidebar.button("➕ Создать чат", use_container_width=True):
+    if new_friend and new_friend != st.session_state.chat_user:
+        room_key = "__".join(sorted([st.session_state.chat_user, new_friend]))
+        if room_key not in db_talks:
+            db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "🛠️"}]
+            save_data(db_talks, DB_MESSAGES)
+        st.session_state.current_room = room_key
+        st.rerun()
+    elif new_friend == st.session_state.chat_user:
+        st.sidebar.error("⚠️ Нельзя создать чат с самим собой!")
+
+st.sidebar.write("---")
+# --- ВЫВОД СЧЁТЧИКА ОНЛАЙНА (ФИЧА №3) ---
 online_count = len(db_online) + 1
 st.sidebar.markdown(f"### 👥 Коты в сети: `{online_count}`")
 
@@ -124,9 +175,8 @@ col_h, col_call = st.columns()
 with col_h:
     st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 with col_call:
-    # ИСПРАВЛЕНО: Полностью вырезаем опасные символы, чтобы браузер не ломался
+    # ИСПРАВЛЕНО: Вырезаем все знаки и спецсимволы, чтобы ссылка не ломала DNS браузера
     clean_room_id = active_room.replace("__", "x").replace(" ", "").replace("@", "").replace("-", "")
-    # Формируем стандартную прямую ссылку на глобальный сервер Jitsi
     call_url = f"https://jit.si{clean_room_id}"
     st.markdown(f'<a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a>', unsafe_allow_html=True)
 
