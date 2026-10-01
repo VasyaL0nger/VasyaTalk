@@ -161,7 +161,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ФИЧА №8 - ИСПРАВЛЕННЫЕ ЗВОНКИ) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ИСПРАВЛЕНО: st.columns(2)) =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -171,14 +171,14 @@ else:
     names = active_room.split("__")
     header_name = names if names == st.session_state.chat_user else names
 
-col_h, col_call = st.columns()
+# ИСПРАВЛЕНО: Передали двойку внутрь st.columns(2), чтобы разбить шапку на две ровные части
+col_h, col_call = st.columns(2)
 with col_h:
     st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 with col_call:
-    # ИСПРАВЛЕНО: Вырезаем все знаки и спецсимволы, чтобы ссылка не ломала DNS браузера
     clean_room_id = active_room.replace("__", "x").replace(" ", "").replace("@", "").replace("-", "")
     call_url = f"https://jit.si{clean_room_id}"
-    st.markdown(f'<a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:right; margin-top:10px;"><a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a></div>', unsafe_allow_html=True)
 
 # Поисковый движок (Фича №9)
 search_query = st.text_input("🔍 Найти слово в переписке:", placeholder="Введите текст для фильтрации...").strip().lower()
