@@ -27,7 +27,7 @@ if "chat_user" not in st.session_state: st.session_state.chat_user = None
 if "chat_avatar" not in st.session_state: st.session_state.chat_avatar = None
 if "current_room" not in st.session_state: st.session_state.current_room = None
 
-# Фиксация онлайна в сети
+# Фиксация онлайна в сети (Фича №3)
 current_time = time.time()
 if st.session_state.chat_user:
     db_online[st.session_state.chat_user] = {"time": current_time, "avatar": st.session_state.chat_avatar}
@@ -50,8 +50,11 @@ st.markdown("""<style>
     div[data-testid="stForm"] { background-color: #08080c !important; border: none !important; padding: 0px !important; }
     .online-user { display: inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; }
     
-    /* Кастомный стиль аудиоплеера голосовух под ночную тему */
     audio { filter: invert(90%) hue-rotate(180deg); margin-top: 5px; max-width: 100%; }
+    
+    /* Красивая кнопка звонка в шапке */
+    .call-link { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 10px 20px; text-decoration: none; border-radius: 6px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+    .call-link:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.02); }
 </style>""", unsafe_allow_html=True)
 
 # --- ОКНО ВХОДА ---
@@ -133,7 +136,7 @@ for room_id in list(db_talks.keys()):
             display_name = "🐱 Кот Василий"
         else:
             names = room_id.split("__")
-            display_name = names[0] if names[1] == st.session_state.chat_user else names[1]
+            display_name = names if names == st.session_state.chat_user else names
             
         last_msg = db_talks[room_id][-1]["text"] if db_talks[room_id] else "Нет сообщений"
         if last_msg.startswith("[AUDIO_"): last_msg = "🎙️ Голосовое сообщение"
@@ -158,7 +161,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ФИЧЕЙ №7 (ГОЛОСОВЫЕ) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ФИЧА №8 - ЗВОНКИ) =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -166,9 +169,17 @@ if active_room.startswith("Кот_Василий__"):
     header_name = "🐱 Кот Василий"
 else:
     names = active_room.split("__")
-    header_name = names[0] if names[1] == st.session_state.chat_user else names[1]
+    header_name = names if names == st.session_state.chat_user else names
 
-st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
+# Создаем разметку шапки: Имя чата + Кнопка звонка в один ряд
+col_h, col_call = st.columns([3, 1])
+with col_h:
+    st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
+with col_call:
+    # Хакерский инжект ссылки на зашифрованную комнату Jitsi Meet
+    clean_room_id = active_room.replace("__", "x").replace(" ", "_")
+    call_url = f"https://jit.si_{clean_room_id}"
+    st.markdown(f'<a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a>', unsafe_allow_html=True)
 
 # Поисковый движок (Фича №9)
 search_query = st.text_input("🔍 Найти слово в переписке:", placeholder="Введите текст для фильтрации...").strip().lower()
@@ -188,7 +199,6 @@ with chat_box:
         for msg in room_messages:
             av = msg.get('avatar', '🐱')
             
-            # Проверяем, голосовое ли это сообщение
             if msg['text'].startswith("[AUDIO_BASE64_"):
                 audio_base64 = msg['text'].replace("[AUDIO_BASE64_", "").replace("]", "")
                 display_content = f'🎙️ <audio controls src="data:audio/wav;base64,{audio_base64}"></audio>'
@@ -214,13 +224,12 @@ with chat_box:
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
-# ================= 🎙️ ИНТЕГРАЦИЯ РЕКОРДЕРА ГОЛОСОВЫХ СООБЩЕНИЙ =================
+# --- ИНТЕГРАЦИЯ РЕКОРДЕРА ГОЛОСОВЫХ СООБЩЕНИЙ ---
 st.write("🎙️ Записать аудио-сообщение пацанам:")
 audio_value = st.audio_input("Нажми на микрофон для записи:")
 
 if audio_value is not None:
     import base64
-    # Переводим байты аудио в формат base64 для безопасного хранения в json
     audio_bytes = audio_value.read()
     audio_encoded = base64.b64encode(audio_bytes).decode('utf-8')
     
@@ -250,4 +259,3 @@ with st.form("send_msg_form", clear_on_submit=True):
         db_talks[active_room].append(new_msg_data)
         save_data(db_talks, DB_MESSAGES)
         st.rerun()
-
