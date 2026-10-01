@@ -27,7 +27,7 @@ if "chat_user" not in st.session_state: st.session_state.chat_user = None
 if "chat_avatar" not in st.session_state: st.session_state.chat_avatar = None
 if "current_room" not in st.session_state: st.session_state.current_room = None
 
-# Фиксация онлайна (Фича №3)
+# Фиксация онлайна в сети
 current_time = time.time()
 if st.session_state.chat_user:
     db_online[st.session_state.chat_user] = {"time": current_time, "avatar": st.session_state.chat_avatar}
@@ -46,12 +46,12 @@ st.markdown("""<style>
     .msg-left { text-align: left; margin-bottom: 12px; color: #ffffff; font-size: 18px; }
     .msg-right { text-align: right; margin-bottom: 12px; color: #ffffff; font-size: 18px; font-weight: bold; }
     
-    /* Специальный стиль для отображения КРУПНЫХ стикеров в переписке */
-    .sticker-img { border-radius: 12px; max-width: 150px; display: inline-block; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    
     input { background-color: #12121a !important; border: 2px solid #ffffff !important; border-radius: 0px !important; color: #ffffff !important; }
     div[data-testid="stForm"] { background-color: #08080c !important; border: none !important; padding: 0px !important; }
     .online-user { display: inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; }
+    
+    /* Кастомный стиль аудиоплеера голосовух под ночную тему */
+    audio { filter: invert(90%) hue-rotate(180deg); margin-top: 5px; max-width: 100%; }
 </style>""", unsafe_allow_html=True)
 
 # --- ОКНО ВХОДА ---
@@ -60,11 +60,11 @@ if st.session_state.chat_user is None:
     nickname = st.text_input("Введи свой пацанский никнейм:", placeholder="Например: Снайпер_Рыжий").strip()
     
     avatar_options = {
-        "🐱 Василий Спецназ": "v1.png", "🟢 Василий Геймер": "v2.png", "🛠️ Василий Инженер": "v3.png",
-        "🎒 Василий Студент": "v4.png", "🏴‍☠️ Капитан Василий": "v5.png", "🎀 Мурка Стримерша": "m1.png",
-        "🕵️‍♀️ Мурка Агент": "m2.png", "🎓 Мурка Отличница": "m3.png", "👑 Мурка Premium": "m4.png", "⚓ Штурман Мурка": "m5.png"
+        "🐱 Василий Спецназ": "🐱", "🟢 Василий Геймер": "🟢", "🛠️ Василий Инженер": "🛠️",
+        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍☠️", "🎀 Мурка Стримерша": "🎀",
+        "🕵️‍♀️ Мурка Агент": "🕵️‍♀️", "🎓 Мурка Отличница": "🎓", "👑 Мурка Premium": "👑", "⚓ Штурман Мурка": "⚓"
     }
-    avatar_choice = st.selectbox("Выбери аватарку кота:", list(avatar_options.keys()))
+    avatar_choice = st.selectbox("Выбери статус-иконку кота:", list(avatar_options.keys()))
     
     if st.button("🚀 ПОДКЛЮЧИТЬСЯ"):
         if nickname:
@@ -87,7 +87,7 @@ if st.sidebar.button("➕ Создать чат", use_container_width=True):
     if new_friend and new_friend != st.session_state.chat_user:
         room_key = "__".join(sorted([st.session_state.chat_user, new_friend]))
         if room_key not in db_talks:
-            db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "v3.png"}]
+            db_talks[room_key] = [{"time": time.strftime("%H:%M"), "user": "Система", "text": f"🔐 Секретный канал связи с {new_friend} установлен!", "avatar": "🛠️"}]
             save_data(db_talks, DB_MESSAGES)
         st.session_state.current_room = room_key
         st.rerun()
@@ -99,20 +99,18 @@ st.sidebar.write("---")
 online_count = len(db_online) + 1
 st.sidebar.markdown(f"### 👥 Коты в сети: `{online_count}`")
 
-v_url = "https://githubusercontent.com"
 st.sidebar.markdown(f"""
 <div class="online-user">
-    <img src="{v_url}" width="35" style="border-radius:50%; border:2px solid #22c55e;"><br>
+    <span style="font-size:24px; vertical-align:middle;">🐱</span><br>
     <span style="font-size:11px; color:#22c55e;">● Василий</span>
 </div>
 """, unsafe_allow_html=True)
 
 for user_on, data_on in db_online.items():
     if user_on != "Кот Василий":
-        u_url = f"https://githubusercontent.com{data_on['avatar']}"
         st.sidebar.markdown(f"""
         <div class="online-user">
-            <img src="{u_url}" width="35" style="border-radius:50%; border:2px solid #22c55e;"><br>
+            <span style="font-size:24px; vertical-align:middle;">{data_on['avatar']}</span><br>
             <span style="font-size:11px; color:#22c55e;">● {user_on[:8]}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -122,7 +120,7 @@ st.sidebar.markdown("### 💬 Твои переписки:")
 
 vasya_room = f"Кот_Василий__{st.session_state.chat_user}"
 if vasya_room not in db_talks:
-    db_talks[vasya_room] = [{"time": time.strftime("%H:%M"), "user": "Кот Василий", "text": "Дарова брат! Я всегда в сети. Чертежи на месте, пушки заряжены! Пиши, если что.", "avatar": "v2.png"}]
+    db_talks[vasya_room] = [{"time": time.strftime("%H:%M"), "user": "Кот Василий", "text": "Дарова брат! Я всегда в сети. Чертежи на месте, пушки заряжены! Пиши, если что.", "avatar": "🐱"}]
     save_data(db_talks, DB_MESSAGES)
 
 if st.session_state.current_room is None:
@@ -135,9 +133,10 @@ for room_id in list(db_talks.keys()):
             display_name = "🐱 Кот Василий"
         else:
             names = room_id.split("__")
-            display_name = names if names == st.session_state.chat_user else names
+            display_name = names[0] if names[1] == st.session_state.chat_user else names[1]
             
         last_msg = db_talks[room_id][-1]["text"] if db_talks[room_id] else "Нет сообщений"
+        if last_msg.startswith("[AUDIO_"): last_msg = "🎙️ Голосовое сообщение"
         
         if st.session_state.current_room == room_id:
             st.sidebar.markdown(f"""
@@ -159,7 +158,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ОКНО ЧАТА) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ФИЧЕЙ №7 (ГОЛОСОВЫЕ) =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -167,7 +166,7 @@ if active_room.startswith("Кот_Василий__"):
     header_name = "🐱 Кот Василий"
 else:
     names = active_room.split("__")
-    header_name = names if names == st.session_state.chat_user else names
+    header_name = names[0] if names[1] == st.session_state.chat_user else names[1]
 
 st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 
@@ -176,7 +175,7 @@ search_query = st.text_input("🔍 Найти слово в переписке:"
 st.write("---")
 
 if search_query:
-    room_messages = [m for m in raw_messages if search_query in m['text'].lower() and not m['text'].startswith("[STICKER_")]
+    room_messages = [m for m in raw_messages if search_query in m['text'].lower() and not m['text'].startswith("[AUDIO_")]
 else:
     room_messages = raw_messages
 
@@ -187,15 +186,12 @@ with chat_box:
         st.info("Здесь пока тихо...")
     else:
         for msg in room_messages:
-            avatar_path = msg.get('avatar', 'v1.png')
-            avatar_img_url = f"https://githubusercontent.com{avatar_path}"
+            av = msg.get('avatar', '🐱')
             
-            # Логика вывода: обычный текст или СТИКЕР (Фича №6)
-            is_sticker = msg['text'].startswith("[STICKER_")
-            if is_sticker:
-                st_filename = msg['text'].replace("[STICKER_", "").replace("]", "")
-                st_url = f"https://githubusercontent.com{st_filename}"
-                display_content = f'<img src="{st_url}" class="sticker-img">'
+            # Проверяем, голосовое ли это сообщение
+            if msg['text'].startswith("[AUDIO_BASE64_"):
+                audio_base64 = msg['text'].replace("[AUDIO_BASE64_", "").replace("]", "")
+                display_content = f'🎙️ <audio controls src="data:audio/wav;base64,{audio_base64}"></audio>'
             else:
                 display_content = msg['text']
             
@@ -204,50 +200,45 @@ with chat_box:
                 st.markdown(f"""
                 <div class="msg-right">
                     <span style="font-size:12px; color:#a1a1aa; margin-right:8px;">{msg['time']}</span>
-                    {display_content} : <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-left:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>
+                    {display_content} : <span style="font-size:24px; vertical-align:middle;">{av}</span> <b>{msg['user']}</b>
                 </div>
                 """, unsafe_allow_html=True)
             # Сообщения друзей или Василия выстраиваются СЛЕВА
             else:
                 st.markdown(f"""
                 <div class="msg-left">
-                    <img src="{avatar_img_url}" width="35" style="border-radius:50%; vertical-align:middle; margin-right:5px;" onerror="this.style.display='none'"> <b>{msg['user']}</b>: {display_content}
+                    <span style="font-size:24px; vertical-align:middle;">{av}</span> <b>{msg['user']}</b>: {display_content}
                     <span style="font-size:12px; color:#a1a1aa; margin-left:8px;">{msg['time']}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
-# ================= 🎨 ФИЧА №6: ВСПЛЫВАЮЩАЯ ПАНЕЛЬ СТИКЕР-ПАКА ВАСЯТОЛК =================
-with st.expander("🐱 Фирменные стикеры VasyaTalk"):
-    st.write("Тапни на стикер, чтобы мгновенно отправить его пацанам в чат:")
-    
-    st_opts = {
-        "v1.png": "💥 Спецназ", "v2.png": "🎮 Геймер", "v3.png": "🛠️ Инженер", "v4.png": "🎒 Студент", "v5.png": "🏴‍☠️ Капитан",
-        "m1.png": "🎀 Стримерша", "m2.png": "🕵️‍♀️ Агент", "m3.png": "🎓 Отличница", "m4.png": "👑 Premium", "m5.png": "⚓ Штурман"
-    }
-    
-    # Выводим стикеры сеткой кнопок (5 колонок)
-    st_cols = st.columns(5)
-    for s_idx, (st_file, st_label) in enumerate(st_opts.items()):
-        with st_cols[s_idx % 5]:
-            img_preview_url = f"https://githubusercontent.com{st_file}"
-            st.image(img_preview_url, width=60)
-            if st.button(st_label, key=f"st_btn_{st_file}"):
-                new_msg_data = {
-                    "time": time.strftime("%H:%M"),
-                    "user": st.session_state.chat_user,
-                    "text": f"[STICKER_{st_file}]",  # Зашиваем метку стикера в базу данных
-                    "avatar": st.session_state.chat_avatar
-                }
-                db_talks[active_room].append(new_msg_data)
-                save_data(db_talks, DB_MESSAGES)
-                st.rerun()
+# ================= 🎙️ ИНТЕГРАЦИЯ РЕКОРДЕРА ГОЛОСОВЫХ СООБЩЕНИЙ =================
+st.write("🎙️ Записать аудио-сообщение пацанам:")
+audio_value = st.audio_input("Нажми на микрофон для записи:")
 
-# --- НИЖНЕЕ ПОЛЕ ВВОДА СООБЩЕНИЯ ---
+if audio_value is not None:
+    import base64
+    # Переводим байты аудио в формат base64 для безопасного хранения в json
+    audio_bytes = audio_value.read()
+    audio_encoded = base64.b64encode(audio_bytes).decode('utf-8')
+    
+    if st.button("🚀 ОТПРАВИТЬ ГОЛОСОВУХУ", use_container_width=True):
+        new_msg_data = {
+            "time": time.strftime("%H:%M"),
+            "user": st.session_state.chat_user,
+            "text": f"[AUDIO_BASE64_{audio_encoded}]",
+            "avatar": st.session_state.chat_avatar
+        }
+        db_talks[active_room].append(new_msg_data)
+        save_data(db_talks, DB_MESSAGES)
+        st.rerun()
+
+# --- ОБЫЧНОЕ ТЕКСТОВОЕ ПОЛЕ ВВОДА ---
 with st.form("send_msg_form", clear_on_submit=True):
-    user_message = st.text_input("", placeholder="Напиши тут сообщение...")
-    send_btn = st.form_submit_button("🚀")
+    user_message = st.text_input("", placeholder="Напиши тут текстовое сообщение...")
+    send_btn = st.form_submit_button("🚀 Отправить текст")
     
     if send_btn and user_message:
         new_msg_data = {
@@ -259,3 +250,4 @@ with st.form("send_msg_form", clear_on_submit=True):
         db_talks[active_room].append(new_msg_data)
         save_data(db_talks, DB_MESSAGES)
         st.rerun()
+
