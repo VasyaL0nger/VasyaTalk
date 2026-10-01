@@ -1,0 +1,16 @@
+{
+  "short_name": "VasyaTalk",
+  "name": "VasyaTalk Premium Messenger",
+  "icons": [
+    {
+      "src": "https://githubusercontent.com",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#08080c",
+  "display": "standalone",
+  "theme_color": "#22c55e"
+}
