@@ -1,4 +1,4 @@
-    import streamlit as st
+import streamlit as st
 import json
 import os
 import time
@@ -63,7 +63,6 @@ st.markdown("""<style>
     
     audio { filter: invert(90%) hue-rotate(180deg); margin-top: 5px; max-width: 100%; }
     
-    /* Кнопка звонка перенастроена для низа страницы */
     .call-link-bottom { display: block; text-align: center; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 14px; text-decoration: none; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); margin-top: 25px; }
     .call-link-bottom:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.01); }
 </style>""", unsafe_allow_html=True)
@@ -261,7 +260,7 @@ with st.form("send_msg_form", clear_on_submit=True):
         save_data(db_talks, DB_MESSAGES)
         st.rerun()
 
-# --- ФИЧА №8 [ПЕРЕНЕСЕНО]: КНОПКА ЗВОНКА В САМОМ КОНЦЕ СТРАНИЦЫ СТАБИЛЬНО ---
+# --- КНОПКА ЗВОНКА В САМОМ КОНЦЕ СТРАНИЦЫ СТАБИЛЬНО ---
 st.write("---")
 call_url = "https://jit.si"
 st.markdown(f'<a href="{call_url}" target="_blank" class="call-link-bottom">📞 СОЗВОНИТЬСЯ В ШТАБЕ (ОБЩИЙ ВЫЗОВ)</a>', unsafe_allow_html=True)
