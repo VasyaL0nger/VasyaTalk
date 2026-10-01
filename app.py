@@ -64,7 +64,7 @@ if st.session_state.chat_user is None:
     
     avatar_options = {
         "🐱 Василий Спецназ": "🐱", "🟢 Василий Геймер": "🟢", "🛠️ Василий Инженер": "🛠️",
-        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍☠️", "🎀 Мурка Стримерша": "🎀",
+        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍燥️", "🎀 Мурка Стримерша": "🎀",
         "🕵️‍♀️ Мурка Агент": "🕵️‍♀️", "🎓 Мурка Отличница": "🎓", "👑 Мурка Premium": "👑", "⚓ Штурман Мурка": "⚓"
     }
     avatar_choice = st.selectbox("Выбери статус-иконку кота:", list(avatar_options.keys()))
@@ -161,7 +161,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ИСПРАВЛЕНО: st.columns(2)) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ИСПРАВЛЕНО: ЖЕЛЕЗНЫЕ ЗВОНКИ) =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -171,13 +171,12 @@ else:
     names = active_room.split("__")
     header_name = names if names == st.session_state.chat_user else names
 
-# ИСПРАВЛЕНО: Передали двойку внутрь st.columns(2), чтобы разбить шапку на две ровные части
 col_h, col_call = st.columns(2)
 with col_h:
     st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 with col_call:
-    clean_room_id = active_room.replace("__", "x").replace(" ", "").replace("@", "").replace("-", "")
-    call_url = f"https://jit.si{clean_room_id}"
+    # ЖЕЛЕЗНОЕ РЕШЕНИЕ: Чистая прямая ссылка на официальный Штаб звонков без спецсимволов
+    call_url = "https://jit.si"
     st.markdown(f'<div style="text-align:right; margin-top:10px;"><a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a></div>', unsafe_allow_html=True)
 
 # Поисковый движок (Фича №9)
