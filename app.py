@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 import json
 import os
 import time
@@ -34,6 +34,17 @@ if st.session_state.chat_user:
     db_online = {u: t for u, t in db_online.items() if current_time - t["time"] < 300}
     save_data(db_online, DB_ONLINE)
 
+# ================= 🚀 ФИЧА №9: ИНЖЕКТ ДВИЖКА PWA ДЛЯ СКАЧИВАНИЯ НА ТЕЛЕФОН / ПК =================
+st.markdown("""
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('data:text/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGZ1bmN0aW9uKGV2ZW50KSB7fSk7').then(function() {
+    console.log('VasyaTalk PWA Engine Activated! Ready to install.');
+  });
+}
+</script>
+""", unsafe_allow_html=True)
+
 # ================= 🎨 НОЧНОЙ ХАКЕРСКИЙ ИНТЕРФЕЙС =================
 st.markdown("""<style>
     .stApp { background-color: #08080c !important; color: #ffffff !important; font-family: sans-serif !important; }
@@ -52,9 +63,9 @@ st.markdown("""<style>
     
     audio { filter: invert(90%) hue-rotate(180deg); margin-top: 5px; max-width: 100%; }
     
-    /* Красивая кнопка звонка в шапке */
-    .call-link { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 10px 20px; text-decoration: none; border-radius: 6px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
-    .call-link:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.02); }
+    /* Кнопка звонка перенастроена для низа страницы */
+    .call-link-bottom { display: block; text-align: center; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white !important; font-weight: bold; padding: 14px; text-decoration: none; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); margin-top: 25px; }
+    .call-link-bottom:hover { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); transform: scale(1.01); }
 </style>""", unsafe_allow_html=True)
 
 # --- ОКНО ВХОДА ---
@@ -64,7 +75,7 @@ if st.session_state.chat_user is None:
     
     avatar_options = {
         "🐱 Василий Спецназ": "🐱", "🟢 Василий Геймер": "🟢", "🛠️ Василий Инженер": "🛠️",
-        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍燥️", "🎀 Мурка Стримерша": "🎀",
+        "🎒 Василий Студент": "🎒", "🏴‍☠️ Капитан Василий": "🏴‍☠️", "🎀 Мурка Стримерша": "🎀",
         "🕵️‍♀️ Мурка Агент": "🕵️‍♀️", "🎓 Мурка Отличница": "🎓", "👑 Мурка Premium": "👑", "⚓ Штурман Мурка": "⚓"
     }
     avatar_choice = st.selectbox("Выбери статус-иконку кота:", list(avatar_options.keys()))
@@ -161,7 +172,7 @@ if st.sidebar.button("🚪 Выйти из сети", use_container_width=True):
     st.rerun()
 
 
-# ================= 🌐 ЗОНА ПЕРЕПИСКИ (ИСПРАВЛЕНО: ЖЕЛЕЗНЫЕ ЗВОНКИ) =================
+# ================= 🌐 ЗОНА ПЕРЕПИСКИ С ПОИСКОМ =================
 active_room = st.session_state.current_room
 raw_messages = db_talks.get(active_room, [])
 
@@ -171,15 +182,9 @@ else:
     names = active_room.split("__")
     header_name = names if names == st.session_state.chat_user else names
 
-col_h, col_call = st.columns(2)
-with col_h:
-    st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
-with col_call:
-    # ЖЕЛЕЗНОЕ РЕШЕНИЕ: Чистая прямая ссылка на официальный Штаб звонков без спецсимволов
-    call_url = "https://jit.si"
-    st.markdown(f'<div style="text-align:right; margin-top:10px;"><a href="{call_url}" target="_blank" class="call-link">📞 ЗВОНОК</a></div>', unsafe_allow_html=True)
+st.markdown(f"<h2>💬 Чат: {header_name}</h2>", unsafe_allow_html=True)
 
-# Поисковый движок (Фича №9)
+# Поисковый движок
 search_query = st.text_input("🔍 Найти слово в переписке:", placeholder="Введите текст для фильтрации...").strip().lower()
 st.write("---")
 
@@ -255,3 +260,8 @@ with st.form("send_msg_form", clear_on_submit=True):
         db_talks[active_room].append(new_msg_data)
         save_data(db_talks, DB_MESSAGES)
         st.rerun()
+
+# --- ФИЧА №8 [ПЕРЕНЕСЕНО]: КНОПКА ЗВОНКА В САМОМ КОНЦЕ СТРАНИЦЫ СТАБИЛЬНО ---
+st.write("---")
+call_url = "https://jit.si"
+st.markdown(f'<a href="{call_url}" target="_blank" class="call-link-bottom">📞 СОЗВОНИТЬСЯ В ШТАБЕ (ОБЩИЙ ВЫЗОВ)</a>', unsafe_allow_html=True)
