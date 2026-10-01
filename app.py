@@ -66,15 +66,20 @@ if st.session_state.chat_user is None:
     st.markdown("<h1 style='color:#ffffff; text-align:center;'>🐱 Сеть VasyaTalk Premium</h1>", unsafe_allow_html=True)
     st.write("<br>", unsafe_allow_html=True)
     
-      # Текст батника генерируется кодом "на лету" без внешних ссылок
-    bat_script = "@echo off\ntitle VasyaTalk Launcher\ntimeout /t 2 >nul\nstart msedge --app=" + st.get_option("browser.gatherUsageStats") if hasattr(st, "get_option") else "https://streamlit.app"
-    
-    st.markdown("""
+         st.markdown("""
     <div class="download-box">
         <h3 style="margin:0; color:#22c55e;">📱 ХОЧЕШЬ СКАЧАТЬ ВАСЯТАЛК НА ПК КАК ПРОГРАММУ?</h3>
         <p style="color:#a1a1aa; margin:5px 0; margin-bottom:15px;">Загрузи официальный лаунчер, запускай мессенджер в отдельном окне с рабочего стола!</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    st.download_button(
+        label="📥 СКАЧАТЬ ЛАУНЧЕР (.BAT)",
+        data="@echo off\ntitle VasyaTalk Premium\ntimeout /t 2 >nul\nstart msedge --app=https://streamlit.app\nexit",
+        file_name="VasyaTalk.bat",
+        mime="text/plain"
+    )
+
     
     st.download_button(label="📥 СКАЧАТЬ ЛАУНЧЕР (.BAT)", data="@echo off\ntitle VasyaTalk Premium\ntimeout /t 2 >nul\nstart msedge --app=https://streamlit.app\nexit", file_name="VasyaTalk.bat", mime="text/plain")
 
